@@ -1,0 +1,195 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capybara Word Game 🦫</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      font-family: system-ui, sans-serif;
+      background: linear-gradient(135deg, #fff1d6, #d8f3dc);
+      color: #493522;
+    }
+    .game {
+      width: 100%;
+      max-width: 420px;
+      padding: 26px;
+      text-align: center;
+      background: #fffdf7;
+      border: 3px solid #e6c99b;
+      border-radius: 28px;
+      box-shadow: 0 12px 30px #49352220;
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .capy { font-size: 76px; margin: 10px; }
+    .subtitle { color: #806c55; }
+    .stats {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px 0;
+      padding: 12px;
+      background: #f7ecd8;
+      border-radius: 14px;
+      font-weight: 700;
+    }
+    .letters {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 22px 0;
+    }
+    .letter {
+      width: 42px;
+      height: 48px;
+      border: 0;
+      border-radius: 10px;
+      background: #e9b96e;
+      color: #493522;
+      font-size: 22px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .letter:disabled { opacity: .35; }
+    input {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #e6c99b;
+      border-radius: 12px;
+      font-size: 18px;
+      text-align: center;
+      outline-color: #77a66b;
+    }
+    button.action {
+      width: 100%;
+      margin-top: 10px;
+      padding: 13px;
+      border: 0;
+      border-radius: 12px;
+      background: #5d8c52;
+      color: white;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button.secondary { background: #b7834d; }
+    #message { min-height: 28px; font-weight: 700; margin-top: 14px; }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>Capybara Word Game</h1>
+    <div class="capy">🦫</div>
+    <div class="subtitle">Harfleri birleştir, kelimeyi bul!</div>
+
+    <div class="stats">
+      <span>⭐ Puan: <span id="score">0</span></span>
+      <span>🔥 Seri: <span id="streak">0</span></span>
+    </div>
+
+    <p id="hint">Kelime yükleniyor...</p>
+    <div class="letters" id="letters"></div>
+    <input id="answer" placeholder="Kelimeyi yaz..." autocomplete="off">
+    <button class="action" id="check">Kontrol et</button>
+    <button class="action secondary" id="next">Yeni kelime</button>
+    <div id="message" aria-live="polite"></div>
+  </main>
+
+  <script>
+    const words = [
+      { word: "KAPİBARA", hint: "Oyunumuzun sevimli yıldızı 🦫" },
+      { word: "MUZ", hint: "Maymunların sevdiği sarı meyve" },
+      { word: "ELMA", hint: "Kırmızı veya yeşil bir meyve" },
+      { word: "KEDİ", hint: "Miyav diyen evcil hayvan" },
+      { word: "DENİZ", hint: "Mavi ve çok büyük su" },
+      { word: "KAHVE", hint: "Birçok kişinin sabah içeceği" },
+      { word: "ÇİÇEK", hint: "Bahçede açar, güzel kokabilir" },
+      { word: "PİZZA", hint: "Peynirli, yuvarlak İtalyan yemeği" },
+      { word: "BULUT", hint: "Gökyüzünde süzülür" },
+      { word: "DONDURMA", hint: "Soğuk ve tatlı yaz lezzeti" }
+    ];
+
+    let current;
+    let score = Number(localStorage.getItem("capyScore") || 0);
+    let streak = 0;
+    let used = [];
+
+    const $ = id => document.getElementById(id);
+    $("score").textContent = score;
+
+    function shuffleWord(word) {
+      let letters = [...word];
+      for (let i = letters.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [letters[i], letters[j]] = [letters[j], letters[i]];
+      }
+      if (letters.join("") === word && letters.length > 1) {
+        [letters[0], letters[1]] = [letters[1], letters[0]];
+      }
+      return letters;
+    }
+
+    function newWord() {
+      if (used.length === words.length) used = [];
+      const available = words.filter(w => !used.includes(w.word));
+      current = available[Math.floor(Math.random() * available.length)];
+      used.push(current.word);
+      $("hint").textContent = "💡 İpucu: " + current.hint;
+      $("answer").value = "";
+      $("message").textContent = "";
+      $("letters").innerHTML = "";
+      shuffleWord(current.word).forEach(letter => {
+        const button = document.createElement("button");
+        button.className = "letter";
+        button.textContent = letter;
+        button.type = "button";
+        button.addEventListener("click", () => {
+          $("answer").value += letter;
+          button.disabled = true;
+          $("answer").focus();
+        });
+        $("letters").appendChild(button);
+      });
+    }
+
+    function checkAnswer() {
+      const answer = $("answer").value.trim().toLocaleUpperCase("tr-TR");
+      if (answer === current.word) {
+        score += 10 + streak * 2;
+        streak++;
+        localStorage.setItem("capyScore", score);
+        $("score").textContent = score;
+        $("streak").textContent = streak;
+        $("message").textContent = "🎉 Harika! Doğru bildin!";
+        $("next").textContent = "Sonraki kelime →";
+        $("check").disabled = true;
+        $("check").style.opacity = ".5";
+      } else {
+        streak = 0;
+        $("streak").textContent = streak;
+        $("message").textContent = "🙈 Olmadı! Bir daha dene.";
+      }
+    }
+
+    $("check").addEventListener("click", checkAnswer);
+    $("answer").addEventListener("keydown", e => {
+      if (e.key === "Enter") checkAnswer();
+    });
+    $("next").addEventListener("click", () => {
+      $("check").disabled = false;
+      $("check").style.opacity = "1";
+      $("next").textContent = "Yeni kelime";
+      newWord();
+    });
+
+    newWord();
+  </script>
+</body>
+</html>
