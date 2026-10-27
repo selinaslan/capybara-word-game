@@ -1,191 +1,423 @@
 
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Capybara Word Game 🦫</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#fff1d6">
+  <title>Capybara Word Game</title>
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       min-height: 100vh;
       display: grid;
       place-items: center;
-      padding: 20px;
+      padding: 16px;
       font-family: system-ui, sans-serif;
-      background: linear-gradient(135deg, #fff1d6, #d8f3dc);
       color: #493522;
+      background: linear-gradient(135deg, #fff1d6, #d8f3dc);
     }
+
     .game {
       width: 100%;
       max-width: 420px;
-      padding: 26px;
+      padding: 24px 20px;
       text-align: center;
       background: #fffdf7;
       border: 3px solid #e6c99b;
       border-radius: 28px;
       box-shadow: 0 12px 30px #49352220;
     }
-    h1 { margin: 0 0 8px; font-size: 28px; }
-    .capy { font-size: 76px; margin: 10px; }
-    .subtitle { color: #806c55; }
+
+    h1 { margin: 0; font-size: 27px; }
+    .capy { font-size: 68px; margin: 10px 0 4px; }
+    .subtitle { color: #806c55; font-size: 14px; }
+
     .stats {
       display: flex;
       justify-content: space-between;
-      margin: 20px 0;
+      gap: 8px;
+      margin: 20px 0 12px;
       padding: 12px;
       background: #f7ecd8;
       border-radius: 14px;
       font-weight: 700;
+      font-size: 14px;
     }
+
+    .progress {
+      height: 8px;
+      background: #eee3d1;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 12px 0 18px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0;
+      background: #77a66b;
+      transition: width .3s ease;
+    }
+
+    .hint {
+      min-height: 44px;
+      line-height: 1.5;
+      margin: 12px 0;
+    }
+
+    .answer {
+      min-height: 58px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 8px;
+      border: 2px dashed #e6c99b;
+      border-radius: 14px;
+      background: #fffaf0;
+    }
+
+    .tile {
+      width: 34px;
+      height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: #d9eacb;
+      color: #31532a;
+      font-size: 19px;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .placeholder {
+      color: #a99983;
+      font-size: 13px;
+    }
+
     .letters {
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
       gap: 8px;
-      margin: 22px 0;
+      margin: 18px 0;
+      min-height: 46px;
     }
+
     .letter {
       width: 42px;
-      height: 48px;
+      height: 46px;
       border: 0;
       border-radius: 10px;
       background: #e9b96e;
       color: #493522;
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 800;
       cursor: pointer;
+      touch-action: manipulation;
     }
-    .letter:disabled { opacity: .35; }
-    input {
-      width: 100%;
-      padding: 14px;
-      border: 2px solid #e6c99b;
-      border-radius: 12px;
-      font-size: 18px;
-      text-align: center;
-      outline-color: #77a66b;
-    }
-    button.action {
-      width: 100%;
-      margin-top: 10px;
-      padding: 13px;
+
+    button:disabled { opacity: .4; cursor: default; }
+
+    .actions { display: flex; gap: 8px; }
+
+    .action {
+      flex: 1;
+      padding: 13px 8px;
       border: 0;
       border-radius: 12px;
       background: #5d8c52;
       color: white;
-      font-size: 17px;
+      font-size: 15px;
       font-weight: 700;
       cursor: pointer;
+      touch-action: manipulation;
     }
-    button.secondary { background: #b7834d; }
-    #message { min-height: 28px; font-weight: 700; margin-top: 14px; }
+
+    .secondary { background: #b7834d; }
+    #message { min-height: 28px; margin-top: 14px; font-weight: 700; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 5;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      background: #493522b8;
+    }
+
+    .overlay.show { display: grid; }
+
+    .transition-card {
+      width: 100%;
+      max-width: 340px;
+      padding: 28px 22px;
+      text-align: center;
+      background: #fffdf7;
+      border: 3px solid #e6c99b;
+      border-radius: 26px;
+      animation: pop .35s ease-out;
+    }
+
+    .transition-card .capy { font-size: 76px; }
+
+    @keyframes pop {
+      from { opacity: 0; transform: scale(.88); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+    }
   </style>
 </head>
 <body>
   <main class="game">
     <h1>Capybara Word Game</h1>
     <div class="capy">🦫</div>
-    <div class="subtitle">Harfleri birleştir, kelimeyi bul!</div>
+    <div class="subtitle">Unscramble the letters. Find the word!</div>
 
     <div class="stats">
-      <span>⭐ Puan: <span id="score">0</span></span>
-      <span>🔥 Seri: <span id="streak">0</span></span>
+      <span>⭐ Score: <span id="score">0</span></span>
+      <span>🔥 Streak: <span id="streak">0</span></span>
     </div>
 
-    <p id="hint">Kelime yükleniyor...</p>
+    <div>
+      <strong id="roundLabel">Round 1 · Word 1 of 5</strong>
+      <div class="progress">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="subtitle" id="remaining">5 words until the next round</div>
+    </div>
+
+    <p class="hint" id="hint">Loading your first word...</p>
+
+    <div class="answer" id="answer" aria-label="Your answer">
+      <span class="placeholder">Tap letters below to build your word</span>
+    </div>
+
     <div class="letters" id="letters"></div>
-    <input id="answer" placeholder="Kelimeyi yaz..." autocomplete="off">
-    <button class="action" id="check">Kontrol et</button>
-    <button class="action secondary" id="next">Yeni kelime</button>
+
+    <div class="actions">
+      <button class="action secondary" id="undo">⌫ Undo</button>
+      <button class="action secondary" id="clear">Clear</button>
+      <button class="action" id="check">Check</button>
+    </div>
+
     <div id="message" aria-live="polite"></div>
+    <button class="action" id="next" hidden>Next word →</button>
   </main>
+
+  <div class="overlay" id="overlay" role="dialog" aria-modal="true">
+    <div class="transition-card">
+      <div class="capy" id="transitionCapy">🦫</div>
+      <h2 id="transitionTitle">Round complete!</h2>
+      <p id="transitionText">Great job! Ready for more?</p>
+      <button class="action" id="continue">Let's go! →</button>
+    </div>
+  </div>
 
   <script>
     const words = [
-      { word: "KAPİBARA", hint: "Oyunumuzun sevimli yıldızı 🦫" },
-      { word: "MUZ", hint: "Maymunların sevdiği sarı meyve" },
-      { word: "ELMA", hint: "Kırmızı veya yeşil bir meyve" },
-      { word: "KEDİ", hint: "Miyav diyen evcil hayvan" },
-      { word: "DENİZ", hint: "Mavi ve çok büyük su" },
-      { word: "KAHVE", hint: "Birçok kişinin sabah içeceği" },
-      { word: "ÇİÇEK", hint: "Bahçede açar, güzel kokabilir" },
-      { word: "PİZZA", hint: "Peynirli, yuvarlak İtalyan yemeği" },
-      { word: "BULUT", hint: "Gökyüzünde süzülür" },
-      { word: "DONDURMA", hint: "Soğuk ve tatlı yaz lezzeti" }
+      { word: "BANANA", hint: "A long yellow fruit" },
+      { word: "APPLE", hint: "A crunchy fruit, often red or green" },
+      { word: "CAT", hint: "A pet that says meow" },
+      { word: "OCEAN", hint: "A huge body of salt water" },
+      { word: "COFFEE", hint: "A popular morning drink" },
+      { word: "FLOWER", hint: "A colorful bloom in a garden" },
+      { word: "PIZZA", hint: "A round Italian dish with cheese" },
+      { word: "CLOUD", hint: "A fluffy shape floating in the sky" },
+      { word: "ICECREAM", hint: "A cold, sweet dessert" },
+      { word: "CAPYBARA", hint: "The world's largest rodent — and our mascot!" },
+      { word: "GUITAR", hint: "A musical instrument with strings" },
+      { word: "JUNGLE", hint: "A thick tropical forest" },
+      { word: "ROCKET", hint: "A vehicle that can travel into space" },
+      { word: "RAINBOW", hint: "A colorful arc after rain" },
+      { word: "CHOCOLATE", hint: "A sweet treat made from cocoa" },
+      { word: "ELEPHANT", hint: "A huge animal with a long trunk" },
+      { word: "BUTTERFLY", hint: "An insect with colorful wings" },
+      { word: "SUNSHINE", hint: "Bright light from the sun" },
+      { word: "ADVENTURE", hint: "An exciting or unusual experience" },
+      { word: "WATERMELON", hint: "A big green fruit with red flesh" }
     ];
 
-    let current;
+    const ROUND_SIZE = 5;
+    const $ = id => document.getElementById(id);
+
     let score = Number(localStorage.getItem("capyScore") || 0);
     let streak = 0;
-    let used = [];
+    let solved = 0;
+    let current = null;
+    let pool = [];
+    let selected = [];
+    let locked = false;
+    let usedWords = [];
 
-    const $ = id => document.getElementById(id);
     $("score").textContent = score;
 
-    function shuffleWord(word) {
-      let letters = [...word];
-      for (let i = letters.length - 1; i > 0; i--) {
+    function shuffle(word) {
+      const chars = [...word];
+      for (let i = chars.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
-        [letters[i], letters[j]] = [letters[j], letters[i]];
+        [chars[i], chars[j]] = [chars[j], chars[i]];
       }
-      if (letters.join("") === word && letters.length > 1) {
-        [letters[0], letters[1]] = [letters[1], letters[0]];
+      if (chars.join("") === word && chars.length > 1) {
+        [chars[0], chars[1]] = [chars[1], chars[0]];
       }
-      return letters;
+      return chars;
     }
 
-    function newWord() {
-      if (used.length === words.length) used = [];
-      const available = words.filter(w => !used.includes(w.word));
-      current = available[Math.floor(Math.random() * available.length)];
-      used.push(current.word);
-      $("hint").textContent = "💡 İpucu: " + current.hint;
-      $("answer").value = "";
-      $("message").textContent = "";
+    function updateProgress() {
+      const position = (solved % ROUND_SIZE) + 1;
+      const round = Math.floor(solved / ROUND_SIZE) + 1;
+      const remaining = ROUND_SIZE - (solved % ROUND_SIZE);
+
+      $("roundLabel").textContent =
+        `Round ${round} · Word ${position} of ${ROUND_SIZE}`;
+      $("progressFill").style.width =
+        `${(solved % ROUND_SIZE) / ROUND_SIZE * 100}%`;
+
+      $("remaining").textContent =
+        remaining === 1
+          ? "1 word until the next round"
+          : `${remaining} words until the next round`;
+    }
+
+    function render() {
+      $("answer").innerHTML = "";
       $("letters").innerHTML = "";
-      shuffleWord(current.word).forEach(letter => {
+
+      if (selected.length === 0) {
+        const placeholder = document.createElement("span");
+        placeholder.className = "placeholder";
+        placeholder.textContent = "Tap letters below to build your word";
+        $("answer").appendChild(placeholder);
+      }
+
+      selected.forEach((item, index) => {
+        const button = document.createElement("button");
+        button.className = "tile";
+        button.type = "button";
+        button.textContent = item.letter;
+        button.setAttribute("aria-label", `Remove ${item.letter}`);
+        button.disabled = locked;
+        button.addEventListener("click", () => {
+          if (locked) return;
+          pool[item.id].used = false;
+          selected.splice(index, 1);
+          render();
+        });
+        $("answer").appendChild(button);
+      });
+
+      pool.forEach(item => {
         const button = document.createElement("button");
         button.className = "letter";
-        button.textContent = letter;
         button.type = "button";
+        button.textContent = item.letter;
+        button.disabled = item.used || locked;
         button.addEventListener("click", () => {
-          $("answer").value += letter;
-          button.disabled = true;
-          $("answer").focus();
+          if (locked || item.used) return;
+          item.used = true;
+          selected.push(item);
+          render();
         });
         $("letters").appendChild(button);
       });
     }
 
+    function newWord() {
+      if (usedWords.length === words.length) usedWords = [];
+
+      const available = words.filter(w => !usedWords.includes(w.word));
+      current = available[Math.floor(Math.random() * available.length)];
+      usedWords.push(current.word);
+
+      pool = shuffle(current.word).map((letter, id) => ({
+        letter, id, used: false
+      }));
+      selected = [];
+      locked = false;
+
+      $("hint").textContent = "💡 Hint: " + current.hint;
+      $("message").textContent = "";
+      $("next").hidden = true;
+      $("check").hidden = false;
+      $("undo").disabled = false;
+      $("clear").disabled = false;
+
+      updateProgress();
+      render();
+    }
+
+    function undo() {
+      if (locked || selected.length === 0) return;
+      const last = selected.pop();
+      pool[last.id].used = false;
+      render();
+    }
+
+    function clearAnswer() {
+      if (locked) return;
+      selected.forEach(item => { pool[item.id].used = false; });
+      selected = [];
+      render();
+    }
+
     function checkAnswer() {
-      const answer = $("answer").value.trim().toLocaleUpperCase("tr-TR");
+      if (locked) return;
+
+      const answer = selected.map(item => item.letter).join("");
       if (answer === current.word) {
+        locked = true;
         score += 10 + streak * 2;
         streak++;
+        solved++;
+
         localStorage.setItem("capyScore", score);
         $("score").textContent = score;
         $("streak").textContent = streak;
-        $("message").textContent = "🎉 Harika! Doğru bildin!";
-        $("next").textContent = "Sonraki kelime →";
-        $("check").disabled = true;
-        $("check").style.opacity = ".5";
+        $("message").textContent = "🎉 Correct! You're amazing!";
+        $("check").hidden = true;
+        $("undo").disabled = true;
+        $("clear").disabled = true;
+
+        $("progressFill").style.width =
+          `${(solved % ROUND_SIZE === 0 ? ROUND_SIZE : solved % ROUND_SIZE) / ROUND_SIZE * 100}%`;
+
+        render();
+
+        if (solved % ROUND_SIZE === 0) {
+          $("next").hidden = true;
+          $("transitionCapy").textContent = "🦫🎉";
+          $("transitionTitle").textContent =
+            `Round ${solved / ROUND_SIZE} complete!`;
+          $("transitionText").textContent =
+            `Amazing work! You've solved ${solved} words and earned ${score} points. Ready for the next challenge?`;
+          $("continue").textContent = "Start next round →";
+          setTimeout(() => $("overlay").classList.add("show"), 650);
+        } else {
+          $("next").hidden = false;
+        }
       } else {
         streak = 0;
         $("streak").textContent = streak;
-        $("message").textContent = "🙈 Olmadı! Bir daha dene.";
+        $("message").textContent = "🙈 Not quite! Try again.";
       }
     }
 
+    $("undo").addEventListener("click", undo);
+    $("clear").addEventListener("click", clearAnswer);
     $("check").addEventListener("click", checkAnswer);
-    $("answer").addEventListener("keydown", e => {
-      if (e.key === "Enter") checkAnswer();
-    });
-    $("next").addEventListener("click", () => {
-      $("check").disabled = false;
-      $("check").style.opacity = "1";
-      $("next").textContent = "Yeni kelime";
+    $("next").addEventListener("click", newWord);
+
+    $("continue").addEventListener("click", () => {
+      $("overlay").classList.remove("show");
       newWord();
     });
 
